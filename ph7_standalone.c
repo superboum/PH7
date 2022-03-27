@@ -106,15 +106,16 @@ int main(int argc, char **argv) {
   /* Now configure the VM
    */
   char req[INPUT_BUFFER];
-  int lines = -1;
+  int cnt = -1;
   int acc = 0;
   while (1) {
-    lines = read(STDIN_FILENO, req + acc, INPUT_BUFFER - acc);
-    if (lines <= 0) break;
-    acc += lines;
+    cnt = read(STDIN_FILENO, req + acc, INPUT_BUFFER - acc);
+    if (cnt <= 0) break;
+    acc += cnt;
+    if (acc >= 2 && *(req + (acc - 2)) == '\n' && *(req + (acc - 1)) == '\n') break;
   }
 
-  if (lines < 0) {
+  if (cnt < 0) {
     Fatal(0, "Unable to read stdin");
   }
 
