@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "ph7.h"
 
@@ -8,16 +9,17 @@
 #define INPUT_BUFFER 8192
 
 static void EndHeaders() {
-  puts("X-Powered-By: " PH7_SIG "\n\n");
+  char* headers = "X-Powered-By: " PH7_SIG "\r\n\r\n";
+  write(STDOUT_FILENO, headers, strlen(headers));
 }
 
 static void Fatal (int status, const char *zMsg) {
   if (status) {
-    puts("HTTP/1.1 404 Not Found\n");
+    puts("HTTP/1.1 404 Not Found\r\n");
   } else {
-    puts("HTTP/1.1 500 Internal Server Error\n");
+    puts("HTTP/1.1 500 Internal Server Error\r\n");
   }
-  puts("Content-Type: text/plain; charset=utf-8\n");
+  puts("Content-Type: text/plain; charset=utf-8\r\n");
   EndHeaders();
   ph7_lib_shutdown();
   exit(1);
@@ -34,10 +36,11 @@ static void Fatal (int status, const char *zMsg) {
 */
 static int OutputConsumer(const void *pOutput, unsigned int nOutputLen, void *pUserData /* Unused */)
 {
-  /*
-   * Note that it's preferable to use the write() system call to display the output
-   * rather than using the libc printf() which everybody now is extremely slow.
-   */
+
+  char* header = "HTTP/1.1 200 OK\r\n";
+  write(STDOUT_FILENO, header, strlen(header));
+
+  EndHeaders();
 
   int cnt;
   while (nOutputLen > 0) {
@@ -112,7 +115,12 @@ int main(int argc, char **argv) {
     cnt = read(STDIN_FILENO, req + acc, INPUT_BUFFER - acc);
     if (cnt <= 0) break;
     acc += cnt;
-    if (acc >= 2 && *(req + (acc - 2)) == '\n' && *(req + (acc - 1)) == '\n') break;
+    if (acc >= 4 
+      && *(req + (acc - 4)) == '\r' 
+      && *(req + (acc - 3)) == '\n'
+      && *(req + (acc - 2)) == '\r' 
+      && *(req + (acc - 1)) == '\n'
+    ) break;
   }
 
   if (cnt < 0) {
